@@ -1,5 +1,6 @@
 import sys
 from binascii import hexlify
+import argparse
 LITTLE = True
 BIG = False
 DEFAULT_ADDRESS_SIZE = 16
@@ -28,12 +29,22 @@ def write_data(cells, address_size, cell_size, f):
     f.write(f"  endcase\n")
     f.write(f"end")
 
-if len(sys.argv) < 3:
-    print('Usage: hex_to_verilog.py <input_bin_file> <output_v_file>')
-    sys.exit(1)
+parser = argparse.ArgumentParser(description='Hex to Verilog Translator')
+parser.add_argument('infile', help='Input .bin file')
+parser.add_argument('outfile', help='Output .v file')
+parser.add_argument('-c', '--cell', type=int, action='store', help='the size of individual memory cells in ram')
+parser.add_argument('-a', '--address', type=int, action='store', help='the size of addresses in ram')
+endian_group = parser.add_mutually_exclusive_group()
+endian_group.add_argument('-l', '--little', action='store_true', help='Set to little endian')
+endian_group.add_argument('-b', '--big', action='store_true', help='Set to big endian')
+args = parser.parse_args()
 
-with open(sys.argv[1], 'rb') as f:
+cell_size = args.cell if args.cell else DEFAULT_CELL_SIZE
+address_size = args.address if args.address else DEFAULT_ADDRESS_SIZE
+endian = BIG if args.big else LITTLE if args.little else DEFAULT_ENDIANNESS
+
+with open(args.infile, 'rb') as f:
     f_data = hexlify(f.read()).decode('utf-8')
-cells = parse_hex(f_data, DEFAULT_CELL_SIZE, DEFAULT_ENDIANNESS)
-with open(sys.argv[2], 'w') as f:
-    write_data(cells, DEFAULT_ADDRESS_SIZE, DEFAULT_CELL_SIZE, f)
+cells = parse_hex(f_data, cell_size, endian)
+with open(args.outfile, 'w') as f:
+    write_data(cells, address_size, cell_size, f)
